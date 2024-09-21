@@ -1,0 +1,189 @@
+openapi: 3.1.2
+info:
+  title: url-shortner
+  version: 1.0.0
+  description: "This API provides URL shortening services, allowing users to convert long URLs into shorter ones. The service supports generating custom aliases for short URLs, setting expiration dates, and removing shortened URLs from the database."
+  contact:
+    email: adityakrmaurya03@gmail.com
+servers:
+  - url: localhost:65123
+tags:
+  - name: "url"
+    description: "Everything about your shortened URL management"
+
+paths:
+  /shortUrl:
+    get:
+      tags:
+        - url
+      description: |
+        Retrieves the original long URL associated with the provided `url_key`.
+        This endpoint is typically used when a user accesses a shortened URL. It returns a 302 redirect, 
+        directing the user to the original long URL.
+      operationId: getLongUrl
+      parameters:
+        - name: url_key
+          description: "The shortened URL key for which the long URL is to be retrieved from the database."
+          schema:
+            type: string
+          in: query
+          required: true
+      responses:
+        "302":
+          headers:
+            location:
+              schema:
+                type: string
+          description: "The location header will contain the original long URL associated with the given `url_key`."
+        "404":
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  type:
+                    type: string
+                    example: "/errors/url-not-found"
+                  title:
+                    type: string
+                    example: "URL Not Found"
+                  status:
+                    type: integer
+                    example: 404
+                  detail:
+                    type: string
+                    example: "No URL is found for the provided `url_key`."
+                  instance:
+                    type: string
+                    example: "/shortUrl?url_key=abc123"
+          description: "No URL is found for the provided `url_key`."
+      summary: "Redirect to the original long URL for a given short URL key."
+
+    put:
+      tags:
+        - url
+      description: |
+        Generates a shortened URL (`url_key`) for a given long URL (`original_url`).
+        Optional parameters allow users to define a custom alias for the short URL or set an expiration date.
+        If no custom alias is provided, the system generates a unique key.
+      operationId: createShortUrl
+      parameters:
+        - name: expiry_date
+          description: "The optional expiration date for the shortened URL (format: ISO 8601 date-time)."
+          schema:
+            format: date-time
+            type: string
+          in: query
+          required: false
+        - name: custom_alias
+          description: "The optional custom alias for the shortened URL. If not provided, the system generates a unique key."
+          schema:
+            type: string
+          in: query
+          required: false
+        - name: original_url
+          description: "The original long URL that needs to be shortened."
+          schema:
+            type: string
+          in: query
+          required: true
+      responses:
+        "200":
+          description: "Returns the newly generated shortened URL (`url_key`) along with other metadata."
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  key:
+                    type: string
+                    example: "Y3S9wb"
+                  long_url:
+                    type: string
+                    format: uri
+                    example: "https://www.example.com"
+                  short_url:
+                    type: string
+                    format: uri
+                    example: "http://localhost/Y3S9wb"
+                  creation_datetime:
+                    type: string
+                    format: date-time
+                    example: "2024-09-14T15:45:00Z"
+                  expiry_datetime:
+                    type: string
+                    format: date-time
+                    example: "2024-12-31T23:59:59Z"
+        "404":
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  type:
+                    type: string
+                    example: "/errors/url-already-exists"
+                  title:
+                    type: string
+                    example: "Short URL Conflict"
+                  status:
+                    type: integer
+                    example: 404
+                  detail:
+                    type: string
+                    example: "The custom alias you provided already exists. Choose a different alias."
+                  instance:
+                    type: string
+                    example: "/shortUrl?custom_alias=example"
+          description: "Conflict with an existing short URL alias."
+      summary: "Create a short URL for a given long URL, with optional alias and expiration date."
+
+    delete:
+      tags:
+        - url
+      description: |
+        Deletes the shortened URL associated with the provided `url_key`.
+        This operation removes the mapping between the short URL and the long URL from the database.
+      operationId: removeShortUrlKey
+      parameters:
+        - name: url_key
+          description: "The shortened URL key for which the associated long URL is to be removed from the database."
+          schema:
+            type: string
+          in: query
+          required: true
+      responses:
+        "204":
+          description: "The shortened URL (`url_key`) and its associated long URL were successfully removed. No content is returned in the response body."
+          headers:
+            cache-control:
+              schema:
+                type: string
+                example: "no-cache"
+            content-location:
+              schema:
+                type: string
+                example: "/shortUrl?url_key=abc123"
+        "404":
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  type:
+                    type: string
+                    example: "/errors/url-not-found"
+                  title:
+                    type: string
+                    example: "URL Not Found"
+                  status:
+                    type: integer
+                    example: 404
+                  detail:
+                    type: string
+                    example: "The provided `url_key` was not found in the database."
+                  instance:
+                    type: string
+                    example: "/shortUrl?url_key=abc123"
+          description: "The provided `url_key` was not found in the database."
+      summary: "Delete a short URL key and its associated long URL from the database."
